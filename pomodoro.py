@@ -61,11 +61,14 @@ if sys.argv[1] == 'start':
 
     @app.route("/next")
     def next_session():
+        global enabled, ticks, phase
         ticks = 1
+        enabled = True
         return ''
 
     @app.route("/prev")
     def prev_session():
+        global enabled, ticks, phase
         if ticks > 240: # more than four minutes passed so we'll repeat the same session
             if phase % 8 == 0: # 20 minutes long pause
                 requests.get(environ.get('LONG_PAUSE'))
@@ -79,6 +82,7 @@ if sys.argv[1] == 'start':
         else: # let's go back a session
             phase -= 1
             ticks = 1
+        enabled = True
         return ''
 
     def poll_ticking():
