@@ -66,7 +66,6 @@ if sys.argv[1] == 'start':
     @app.route("/prev")
     def prev_session():
         if ticks > 240: # more than four minutes passed so we'll repeat the same session
-            ticks = 11111 # TODO
             if phase % 8 == 0: # 20 minutes long pause
                 requests.get(environ.get('LONG_PAUSE'))
                 ticks = 20 * 60
