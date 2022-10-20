@@ -1,19 +1,23 @@
 import requests
 import sys
 import datetime
+from os import environ
 from time import sleep
 from threading import Thread
+from dotenv import load_dotenv
+
+load_dotenv()
 
 if sys.argv[1] == 'start':
     from flask import Flask
 
     app = Flask(__name__)
 
-    phase = 8
+    phase = 1
     enabled = False
-    if phase % 8 == 0: # pausa lunga
+    if phase % 8 == 0: # 20 minutes long pause
         ticks = 20 * 60
-    elif phase % 2 == 0: # pausa breve
+    elif phase % 2 == 0: # normal 5 minutes pause
         ticks = 5 * 60
     else:
         ticks = 25 * 60
@@ -24,12 +28,12 @@ if sys.argv[1] == 'start':
         if ticks == 0: return '--:--:--'
         minute, second = divmod(ticks, 60)
         hour, minute = divmod(minute, 60)
-        if phase % 8 == 0: # pausa lunga
-            phase_str = 'pausa lunga'
-        elif phase % 2 == 0: # pausa ogni due sessioni
-            phase_str = 'pausa'
-        else: # sessione normale
-            phase_str = 'sessione ' + str(int((phase + 1) / 2))
+        if phase % 8 == 0: # 20 minutes long pause
+            phase_str = 'long pause'
+        elif phase % 2 == 0: # normal 5 minutes pause
+            phase_str = 'pause'
+        else: # normal pomodoro session
+            phase_str = 'session ' + str(int((phase + 1) / 2))
         return f'{str(hour).zfill(2)}:{str(minute).zfill(2)}:{str(second).zfill(2)} ({phase_str})'
 
     @app.route("/toggle")
@@ -44,16 +48,37 @@ if sys.argv[1] == 'start':
         ticks -= 1
         if ticks == 0:
             phase += 1
-            if phase % 8 == 0: # pausa lunga da 20 minuti
-                requests.get('https://api.voicemonkey.io/trigger?access_token=2bbc0794a77b79c873f2ff4d118cab16&secret_token=cce42e4851068302693802426de8ffd5&monkey=pausa-lunga&announcement=Hello%20monkey')
+            if phase % 8 == 0: # 20 minutes long pause
+                requests.get(environ.get('LONG_PAUSE'))
                 ticks = 20 * 60
-            elif phase % 2 == 0: # pausa ogni due sessioni
-                requests.get('https://api.voicemonkey.io/trigger?access_token=2bbc0794a77b79c873f2ff4d118cab16&secret_token=cce42e4851068302693802426de8ffd5&monkey=pausa&announcement=Hello%20monkey')
+            elif phase % 2 == 0: # normal 5 minutes pause
+                requests.get(environ.get('SHORT_PAUSE'))
                 ticks = 5 * 60
-            else: # sessione normale
-                requests.get('https://api.voicemonkey.io/trigger?access_token=2bbc0794a77b79c873f2ff4d118cab16&secret_token=cce42e4851068302693802426de8ffd5&monkey=sessione&announcement=Hello%20monkey')
+            else: # normal pomodoro session
+                requests.get(environ.get('NORMAL_SESSION'))
                 ticks = 25 * 60
             enabled = False
+
+    @app.route("/next")
+    def next_session():
+        ticks = 1
+
+    @app.route("/prev")
+    def prev_session():
+        if ticks > 240: # more than four minutes passed so we'll repeat the same session
+            ticks = 11111 # TODO
+            if phase % 8 == 0: # 20 minutes long pause
+                requests.get(environ.get('LONG_PAUSE'))
+                ticks = 20 * 60
+            elif phase % 2 == 0: # normal 5 minutes pause
+                requests.get(environ.get('SHORT_PAUSE'))
+                ticks = 5 * 60
+            else: # normal pomodoro session
+                requests.get(environ.get('NORMAL_SESSION'))
+                ticks = 25 * 60
+        else: # let's go back a session
+            phase -= 1
+            ticks = 1
 
     def poll_ticking():
         while True:
@@ -61,4 +86,4 @@ if sys.argv[1] == 'start':
             sleep(1)
 
     Thread(target=poll_ticking).start()
-    app.run(host='192.168.188.170', port=6565, debug=False)
+    app.run(host=environ.get('IP_ADDRESS'), port=6565, debug=False)
