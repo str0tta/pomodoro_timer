@@ -62,6 +62,7 @@ if sys.argv[1] == 'start':
     @app.route("/next")
     def next_session():
         ticks = 1
+        return ''
 
     @app.route("/prev")
     def prev_session():
@@ -78,6 +79,7 @@ if sys.argv[1] == 'start':
         else: # let's go back a session
             phase -= 1
             ticks = 1
+        return ''
 
     def poll_ticking():
         while True:
